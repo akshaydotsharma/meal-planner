@@ -1,0 +1,112 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model UserProfile {
+  id           String   @id @default(cuid())
+  pantryText   String   @default("")
+  utensilsText String   @default("")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Session {
+  id                   String   @id @default(cuid())
+  createdAt            DateTime @default(now())
+  extraIngredientsText String   @default("")
+  constraintsJson      String   @default("{}")
+
+  recommendationSets   RecommendationSet[]
+}
+
+model RecommendationSet {
+  id              String   @id @default(cuid())
+  sessionId       String
+  model           String   @default("gpt-4o")
+  promptVersion   String   @default("v1")
+  rawResponseJson String
+  createdAt       DateTime @default(now())
+
+  session         Session      @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  options         OptionItem[]
+}
+
+model OptionItem {
+  id                     String   @id @default(cuid())
+  recommendationSetId    String
+  idx                    Int
+  title                  String
+  why                    String
+  timeMins               Int
+  difficulty             String
+  ingredientsUsedJson    String
+  missingIngredientsJson String
+  stepsJson              String
+  substitutionsJson      String
+
+  recommendationSet      RecommendationSet @relation(fields: [recommendationSetId], references: [id], onDelete: Cascade)
+  feedback               OptionFeedback?
+  savedMeal              SavedMeal?
+}
+
+model OptionFeedback {
+  id           String   @id @default(cuid())
+  optionItemId String   @unique
+  decision     String   // ACCEPT, REJECT, NOT_NOW
+  reason       String?  // TOO_LONG, TOO_COMPLEX, DONT_LIKE_INGREDIENT, NOT_IN_MOOD, TOO_UNHEALTHY, OTHER
+  reasonNote   String?  // Optional free-text note for "Other" reason
+  createdAt    DateTime @default(now())
+
+  optionItem   OptionItem @relation(fields: [optionItemId], references: [id], onDelete: Cascade)
+}
+
+model PreferenceSummary {
+  id          String   @id @default(cuid())
+  summaryText String   // AI-generated summary under 1200 chars
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+}
+
+model SavedMeal {
+  id           String   @id @default(cuid())
+  optionItemId String   @unique
+  createdAt    DateTime @default(now())
+
+  optionItem   OptionItem @relation(fields: [optionItemId], references: [id], onDelete: Cascade)
+}
+
+model Plan {
+  id          String   @id @default(cuid())
+  inputsJson  String   // { days: number, maxCookTime: number, diet?: string, includeCuisines?: string[], excludeCuisines?: string[] }
+  createdAt   DateTime @default(now())
+
+  days         PlanDay[]
+  shoppingList ShoppingList?
+}
+
+model PlanDay {
+  id              String   @id @default(cuid())
+  planId          String
+  dayIndex        Int      // 0-based index (0 = Day 1)
+  recipeJson      String   // Full recipe data matching OptionSchema format + reuseNotes
+  rawResponseJson String   // Raw AI response for this day
+  createdAt       DateTime @default(now())
+
+  plan            Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, dayIndex])
+}
+
+model ShoppingList {
+  id        String   @id @default(cuid())
+  planId    String   @unique
+  listJson  String   // { produce: string[], pantry: string[], dairy: string[], protein: string[], spices: string[] }
+  createdAt DateTime @default(now())
+
+  plan      Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+}
