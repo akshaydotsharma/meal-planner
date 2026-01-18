@@ -3,9 +3,17 @@ import { prisma } from '@/lib/prisma'
 import OpenAI from 'openai'
 import { RecommendationResponseSchema, type RecommendationResponse } from '@/lib/schemas'
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
+// Lazy initialization to avoid build-time errors when env vars aren't available
+let openaiClient: OpenAI | null = null
+
+function getOpenAI(): OpenAI {
+  if (!openaiClient) {
+    openaiClient = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    })
+  }
+  return openaiClient
+}
 
 const CHAT_PROMPT_VERSION = 'chat-v2'
 
@@ -36,7 +44,7 @@ ${malformedJson}
 
 Return ONLY the repaired valid JSON, nothing else.`
 
-  const completion = await openai.chat.completions.create({
+  const completion = await getOpenAI().chat.completions.create({
     model: 'gpt-4o-mini',
     messages: [{ role: 'user', content: repairPrompt }],
     response_format: { type: 'json_object' },
@@ -119,7 +127,7 @@ Provide EXACTLY 3 options. Each option must have all required fields.`
 
     const model = 'gpt-4o'
 
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAI().chat.completions.create({
       model,
       messages: [
         { role: 'system', content: systemPrompt },

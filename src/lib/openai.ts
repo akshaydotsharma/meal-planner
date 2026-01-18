@@ -12,9 +12,17 @@ import {
   type ShoppingList,
 } from './schemas'
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
+// Lazy initialization to avoid build-time errors when env vars aren't available
+let openaiClient: OpenAI | null = null
+
+function getOpenAI(): OpenAI {
+  if (!openaiClient) {
+    openaiClient = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    })
+  }
+  return openaiClient
+}
 
 interface FeedbackSummary {
   title: string
@@ -61,7 +69,7 @@ ${malformedJson}
 
 Return ONLY the repaired valid JSON, nothing else.`
 
-  const completion = await openai.chat.completions.create({
+  const completion = await getOpenAI().chat.completions.create({
     model: 'gpt-4o-mini',
     messages: [{ role: 'user', content: repairPrompt }],
     response_format: { type: 'json_object' },
@@ -134,7 +142,7 @@ Remember: Prioritize using what I have, minimize missing ingredients, be realist
 
   const model = 'gpt-4o'
 
-  const completion = await openai.chat.completions.create({
+  const completion = await getOpenAI().chat.completions.create({
     model,
     messages: [
       { role: 'system', content: systemPrompt },
@@ -201,7 +209,7 @@ IMPORTANT: Keep the summary under 1200 characters. Be specific and actionable - 
 
 Format as plain text paragraphs, not JSON.`
 
-  const completion = await openai.chat.completions.create({
+  const completion = await getOpenAI().chat.completions.create({
     model: 'gpt-4o-mini',
     messages: [{ role: 'user', content: prompt }],
     temperature: 0.3,
@@ -315,7 +323,7 @@ Remember:
 
   const model = 'gpt-4o'
 
-  const completion = await openai.chat.completions.create({
+  const completion = await getOpenAI().chat.completions.create({
     model,
     messages: [
       { role: 'system', content: systemPrompt },
@@ -362,7 +370,7 @@ ${malformedJson}
 
 Return ONLY the repaired valid JSON, nothing else. Ensure the "days" array has exactly ${days} items.`
 
-  const completion = await openai.chat.completions.create({
+  const completion = await getOpenAI().chat.completions.create({
     model: 'gpt-4o-mini',
     messages: [{ role: 'user', content: repairPrompt }],
     response_format: { type: 'json_object' },
@@ -441,7 +449,7 @@ Make it different from: ${existingDays.map(d => d.title).join(', ')}`
 
   const model = 'gpt-4o'
 
-  const completion = await openai.chat.completions.create({
+  const completion = await getOpenAI().chat.completions.create({
     model,
     messages: [
       { role: 'system', content: systemPrompt },
@@ -501,7 +509,7 @@ Remember: Don't include items that are in the pantry staples. Consolidate duplic
 
   const model = 'gpt-4o-mini'
 
-  const completion = await openai.chat.completions.create({
+  const completion = await getOpenAI().chat.completions.create({
     model,
     messages: [
       { role: 'system', content: systemPrompt },
