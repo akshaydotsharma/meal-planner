@@ -2,6 +2,8 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import SavedMealsClient from "./SavedMealsClient";
 
+export const dynamic = 'force-dynamic';
+
 export default async function SavedMealsPage() {
   const savedMeals = await prisma.savedMeal.findMany({
     include: {
